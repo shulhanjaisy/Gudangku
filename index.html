@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gudangku - Smart Warehouse System</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Gudangku System</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-6 font-sans">
@@ -66,89 +65,89 @@
 
   </div>
 
-  <!-- SCRIPT FRONTEND -->
   <script>
-    // 💡 URL Google Script Deployment milikmu
     const GAS_URL = "https://script.google.com/macros/s/AKfycbz98TFdTbcL8yHeDdt-3YdSGknya0_Ao3MPsYDFGWDFYyJ-aLTvSB1wyISZQawf2p_HsQ/exec";
 
-    // Fungsi Tap RFID Fix CORS (Menggunakan GET Request)
-    function tapRFID(uidCard) {
-      const fullUrl = GAS_URL + "?action=LOGIN_STAFF&rfid_uid=" + encodeURIComponent(uidCard);
+    // --- JSONP HELPER (TEMBUS CORS 100%) ---
+    function fetchJSONP(url, callbackName) {
+      const oldScript = document.getElementById("jsonp-script");
+      if (oldScript) oldScript.remove();
 
-      fetch(fullUrl)
-        .then(res => res.json())
-        .then(data => {
-          console.log("Respon Server:", data);
-          if (data.status === "ALLOWED") {
-            alert("✅ AKSES DITERIMA!\nHalo, " + data.staff_name);
-          } else {
-            alert("❌ AKSES DITOLAK!\nKartu tidak terdaftar.");
-          }
-          loadLogs(); // Refresh tabel setelah tap
-        })
-        .catch(err => {
-          console.warn("Mencoba fallback mode GET...", err);
-          fetch(fullUrl, { mode: "no-cors" }).then(() => {
-            alert("Request dikirim ke server!");
-            setTimeout(loadLogs, 1500);
-          });
-        });
+      const script = document.createElement("script");
+      script.id = "jsonp-script";
+      script.src = url + "&callback=" + callbackName;
+      script.onerror = function() {
+        const badge = document.getElementById("status-badge");
+        badge.innerText = "Error Koneksi";
+        badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+      };
+      document.body.appendChild(script);
     }
 
-    // Fungsi Mengambil Data Logs Realtime
+    // --- FUNGSI AMBIL LOGS ---
     function loadLogs() {
-      const fullUrl = GAS_URL + "?action=GET_LOGS";
-
-      fetch(fullUrl)
-        .then(res => res.json())
-        .then(data => {
-          const badge = document.getElementById("status-badge");
-          badge.innerText = "Terhubung (Online)";
-          badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-
-          if (data.status === "SUCCESS" && data.logs) {
-            const logs = data.logs.reverse(); // Data terbaru di paling atas
-            let html = "";
-
-            if (logs.length === 0) {
-              html = `<tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada riwayat tap.</td></tr>`;
-            } else {
-              logs.forEach(log => {
-                const isAllowed = log.status === "ALLOWED";
-                const badgeClass = isAllowed 
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-                  : "bg-rose-500/10 text-rose-400 border-rose-500/20";
-
-                const dateObj = new Date(log.timestamp);
-                const timeStr = isNaN(dateObj) ? log.timestamp : dateObj.toLocaleString("id-ID");
-
-                html += `
-                  <tr class="hover:bg-slate-700/30 transition">
-                    <td class="p-3 text-slate-400 font-mono text-xs">${timeStr}</td>
-                    <td class="p-3 font-mono text-blue-400">${log.rfid_uid}</td>
-                    <td class="p-3 font-medium text-slate-200">${log.staff_name}</td>
-                    <td class="p-3 text-slate-400">${log.type || 'TAP_IN'}</td>
-                    <td class="p-3">
-                      <span class="px-2.5 py-1 rounded-md text-xs font-semibold border ${badgeClass}">
-                        ${log.status}
-                      </span>
-                    </td>
-                  </tr>
-                `;
-              });
-            }
-            document.getElementById("log-table").innerHTML = html;
-          }
-        })
-        .catch(err => {
-          console.error("Gagal load log:", err);
-          const badge = document.getElementById("status-badge");
-          badge.innerText = "Error Koneksi";
-          badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
-        });
+      const url = GAS_URL + "?action=GET_LOGS";
+      fetchJSONP(url, "handleLogsResponse");
     }
 
-    // Auto load data saat halaman dibuka & refresh tiap 3 detik
+    // Callback dari server untuk loadLogs
+    function handleLogsResponse(data) {
+      const badge = document.getElementById("status-badge");
+      badge.innerText = "Terhubung (Online)";
+      badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+
+      if (data.status === "SUCCESS" && data.logs) {
+        const logs = data.logs.reverse();
+        let html = "";
+
+        if (logs.length === 0) {
+          html = `<tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada riwayat tap.</td></tr>`;
+        } else {
+          logs.forEach(log => {
+            const isAllowed = log.status === "ALLOWED";
+            const badgeClass = isAllowed 
+              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+              : "bg-rose-500/10 text-rose-400 border-rose-500/20";
+
+            const dateObj = new Date(log.timestamp);
+            const timeStr = isNaN(dateObj) ? log.timestamp : dateObj.toLocaleString("id-ID");
+
+            html += `
+              <tr class="hover:bg-slate-700/30 transition">
+                <td class="p-3 text-slate-400 font-mono text-xs">${timeStr}</td>
+                <td class="p-3 font-mono text-blue-400">${log.rfid_uid}</td>
+                <td class="p-3 font-medium text-slate-200">${log.staff_name}</td>
+                <td class="p-3 text-slate-400">${log.type || 'TAP_IN'}</td>
+                <td class="p-3">
+                  <span class="px-2.5 py-1 rounded-md text-xs font-semibold border ${badgeClass}">
+                    ${log.status}
+                  </span>
+                </td>
+              </tr>
+            `;
+          });
+        }
+        document.getElementById("log-table").innerHTML = html;
+      }
+    }
+
+    // --- FUNGSI TAP RFID ---
+    function tapRFID(uidCard) {
+      const url = GAS_URL + "?action=LOGIN_STAFF&rfid_uid=" + encodeURIComponent(uidCard);
+      fetchJSONP(url, "handleTapResponse");
+    }
+
+    // Callback dari server untuk tapRFID
+    function handleTapResponse(data) {
+      if (data.status === "ALLOWED") {
+        alert("✅ AKSES DITERIMA!\nHalo, " + data.staff_name);
+      } else {
+        alert("❌ AKSES DITOLAK!\nKartu tidak terdaftar.");
+      }
+      loadLogs();
+    }
+
+    // Auto load data pertama & refresh tiap 3 detik
     loadLogs();
     setInterval(loadLogs, 3000);
   </script>
