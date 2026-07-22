@@ -2,97 +2,98 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Smart Warehouse Semi-AI Agent</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Warehouse Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
+    h2 { color: #333; }
+    .status-card {
+      background: white; padding: 15px; border-radius: 8px; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;
+    }
+    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #007bff; color: white; }
+    .badge-allowed { color: green; font-weight: bold; }
+    .badge-denied { color: red; font-weight: bold; }
+  </style>
 </head>
-<body class="bg-gray-900 text-white p-6 font-sans">
-  <div class="max-w-3xl mx-auto bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
-    <h1 class="text-2xl font-bold text-blue-400 mb-2">📦 Smart Warehouse AI Agent Demo</h1>
-    <p class="text-gray-400 text-sm mb-6">Interactive Prototype untuk Pengujian Dewan Juri</p>
+<body>
 
-    <!-- STEP 1: Tap RFID Simulator -->
-    <div class="bg-gray-700 p-4 rounded-lg mb-6 border-l-4 border-yellow-400">
-      <h2 class="font-semibold text-lg text-yellow-400 mb-2">1. Autentikasi Staf (RFID Simulator)</h2>
-      <div class="flex gap-2">
-        <button onclick="tapRFID('43A1B2C9')" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded text-sm font-bold">Tap Kartu Staf Valid (Jaisy)</button>
-        <button onclick="tapRFID('SALAH123')" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded text-sm font-bold">Tap Kartu Tidak Dikenal</button>
-      </div>
-      <p id="rfid-status" class="mt-2 text-sm italic text-gray-300">Status: Menunggu TAP RFID...</p>
-    </div>
+  <h2>📦 Smart Warehouse - Live Access Monitor</h2>
 
-    <!-- STEP 2: AI FIFO Agent Recommendation -->
-    <div class="bg-gray-700 p-4 rounded-lg mb-6 border-l-4 border-blue-400">
-      <h2 class="font-semibold text-lg text-blue-400 mb-2">2. Pilihan Pengambilan Barang (Outbound)</h2>
-      <label class="block text-sm mb-1">Pilih Barang:</label>
-      <select id="select-barang" class="bg-gray-800 border border-gray-600 rounded p-2 text-white w-full mb-3">
-        <option value="Semen Gresik 50kg">Semen Gresik 50kg</option>
-        <option value="Cat Kayu Avian 1L">Cat Kayu Avian 1L</option>
-      </select>
-      <button onclick="getFIFO()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded font-bold w-full text-sm">Minta Instruksi Rekomendasi AI Agent (FIFO)</button>
-
-      <div id="ai-box" class="hidden mt-4 p-4 bg-gray-900 border border-blue-500 rounded text-sm">
-        <p class="font-bold text-blue-300">🤖 Instruksi AI Agent:</p>
-        <p id="ai-instruction" class="text-lg text-yellow-300 font-bold my-1"></p>
-        <p id="ai-detail" class="text-gray-400"></p>
-        
-        <button onclick="submitOutbound()" class="mt-3 bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded font-bold text-white w-full">Konfirmasi Ambil Sesuai Instruksi AI</button>
-      </div>
-    </div>
+  <div class="status-card">
+    Status Koneksi Web: <strong id="net-status" style="color: orange;">Menghubungkan...</strong><br>
+    Aktivitas Terakhir: <strong id="latest-user">-</strong>
   </div>
 
+  <h3>Riwayat Tap Kartu (Logs)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Waktu</th>
+        <th>UID RFID</th>
+        <th>Nama Staff</th>
+        <th>Aksi</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="log-table-body">
+      <tr><td colspan="5">Memuat data...</td></tr>
+    </tbody>
+  </table>
+
   <script>
-    // MASUKKAN URL GOOGLE APPS SCRIPT-MU DI SINI
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx.../exec"; 
-    let currentStaff = "";
-    let currentBatch = "";
+    // 💡 GANTI DENGAN URL GOOGLE APPS SCRIPT DEPLOYMENT KAMU
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbz98TFdTbcL8yHeDdt-3YdSGknya0_Ao3MPsYDFGWDFYyJ-aLTvSB1wyISZQawf2p_HsQ/exec";
 
-    async function tapRFID(uid) {
-      document.getElementById('rfid-status').innerText = "Verifikasi data ke server...";
-      let res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "LOGIN_STAFF", rfid_uid: uid })
-      });
-      let json = await res.json();
-      if(json.status === "ALLOWED") {
-        currentStaff = json.staff_name;
-        document.getElementById('rfid-status').innerHTML = `<span class="text-green-400 font-bold">AKSES DITERIMA!</span> Selamat Datang, ${json.staff_name}`;
-      } else {
-        currentStaff = "";
-        document.getElementById('rfid-status').innerHTML = `<span class="text-red-400 font-bold">AKSES DITOLAK!</span> ${json.oled_msg}`;
-      }
+    function fetchDataFromSheets() {
+      fetch(GAS_URL + "?action=GET_LOGS")
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === "SUCCESS") {
+            document.getElementById("net-status").innerText = "Terhubung (Real-time)";
+            document.getElementById("net-status").style.color = "green";
+
+            const logs = data.logs.reverse(); // Tampilkan log paling baru di atas
+            let tableRows = "";
+
+            if (logs.length > 0) {
+              // Set aktivitas terakhir
+              document.getElementById("latest-user").innerText = 
+                `${logs[0].staff_name} (${logs[0].rfid_uid}) - Status: ${logs[0].status}`;
+
+              logs.forEach(log => {
+                const statusClass = log.status === "ALLOWED" ? "badge-allowed" : "badge-denied";
+                const timeFormatted = new Date(log.timestamp).toLocaleString("id-ID");
+
+                tableRows += `
+                  <tr>
+                    <td>${timeFormatted}</td>
+                    <td>${log.rfid_uid}</td>
+                    <td>${log.staff_name}</td>
+                    <td>${log.type}</td>
+                    <td class="${statusClass}">${log.status}</td>
+                  </tr>
+                `;
+              });
+            } else {
+              tableRows = `<tr><td colspan="5">Belum ada data log.</td></tr>`;
+            }
+
+            document.getElementById("log-table-body").innerHTML = tableRows;
+          }
+        })
+        .catch(err => {
+          console.error("Gagal mengambil data:", err);
+          document.getElementById("net-status").innerText = "Gagal Konek Ke Server";
+          document.getElementById("net-status").style.color = "red";
+        });
     }
 
-    async function getFIFO() {
-      if(!currentStaff) { alert("Silakan Tap ID Card Staf Valid Terlebih Dahulu!"); return; }
-      let barang = document.getElementById('select-barang').value;
-      
-      let res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "GET_FIFO", nama_barang: barang })
-      });
-      let json = await res.json();
-      
-      if(json.status === "SUCCESS") {
-        currentBatch = json.recommended_batch;
-        document.getElementById('ai-box').classList.remove('hidden');
-        document.getElementById('ai-instruction').innerText = json.instruction;
-        document.getElementById('ai-detail').innerText = `Batch tertua terdeteksi: ${json.recommended_batch} | Stok Sisa: ${json.stok_tersedia}`;
-      } else {
-        alert(json.message);
-      }
-    }
-
-    async function submitOutbound() {
-      let res = await fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "OUTBOUND", kode_batch: currentBatch, qty: 1, staff_name: currentStaff })
-      });
-      let json = await res.json();
-      if(json.status === "SUCCESS") {
-        alert("Pengambilan Sukses! Stok di Google Sheets Otomatis Terpotong.");
-        location.reload();
-      }
-    }
+    // Jalankan pertama kali & atur auto-refresh setiap 2 detik
+    fetchDataFromSheets();
+    setInterval(fetchDataFromSheets, 2000);
   </script>
 </body>
 </html>
