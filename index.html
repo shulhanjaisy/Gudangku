@@ -3,97 +3,154 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Warehouse Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
-    h2 { color: #333; }
-    .status-card {
-      background: white; padding: 15px; border-radius: 8px; 
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;
-    }
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background-color: #007bff; color: white; }
-    .badge-allowed { color: green; font-weight: bold; }
-    .badge-denied { color: red; font-weight: bold; }
-  </style>
+  <title>Gudangku - Smart Warehouse System</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-6 font-sans">
 
-  <h2>📦 Smart Warehouse - Live Access Monitor</h2>
+  <div class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- HEADER -->
+    <div class="flex items-center justify-between bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
+      <div>
+        <h1 class="text-2xl font-bold text-blue-400">Gudangku System</h1>
+        <p class="text-sm text-slate-400">Monitoring RFID Access & Log Real-time</p>
+      </div>
+      <div id="status-badge" class="px-4 py-2 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+        Menghubungkan...
+      </div>
+    </div>
 
-  <div class="status-card">
-    Status Koneksi Web: <strong id="net-status" style="color: orange;">Menghubungkan...</strong><br>
-    Aktivitas Terakhir: <strong id="latest-user">-</strong>
+    <!-- CARDS SIMULATION -->
+    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+      <h2 class="text-lg font-semibold text-slate-200">Simulasi Tap RFID (Web Browser)</h2>
+      <div class="flex flex-wrap gap-3">
+        <button onclick="tapRFID('9AD7E0DB')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition active:scale-95 shadow-md">
+          Tap Kartu Registered (9AD7E0DB)
+        </button>
+        <button onclick="tapRFID('12345678')" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-medium transition active:scale-95 shadow-md">
+          Tap Kartu Unregistered (12345678)
+        </button>
+      </div>
+    </div>
+
+    <!-- LOG MONITOR -->
+    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-slate-200">Riwayat Akses Masuk</h2>
+        <button onclick="loadLogs()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition">
+          🔄 Refresh Log
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-700/50 text-slate-400 uppercase text-xs">
+            <tr>
+              <th class="p-3 rounded-l-lg">Waktu</th>
+              <th class="p-3">UID RFID</th>
+              <th class="p-3">Nama Staff</th>
+              <th class="p-3">Aksi</th>
+              <th class="p-3 rounded-r-lg">Status</th>
+            </tr>
+          </thead>
+          <tbody id="log-table" class="divide-y divide-slate-700/50">
+            <tr>
+              <td colspan="5" class="p-4 text-center text-slate-500">Memuat data dari Google Sheets...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
-  <h3>Riwayat Tap Kartu (Logs)</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Waktu</th>
-        <th>UID RFID</th>
-        <th>Nama Staff</th>
-        <th>Aksi</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody id="log-table-body">
-      <tr><td colspan="5">Memuat data...</td></tr>
-    </tbody>
-  </table>
-
+  <!-- SCRIPT FRONTEND -->
   <script>
-    // 💡 GANTI DENGAN URL GOOGLE APPS SCRIPT DEPLOYMENT KAMU
+    // 💡 URL Google Script Deployment milikmu
     const GAS_URL = "https://script.google.com/macros/s/AKfycbz98TFdTbcL8yHeDdt-3YdSGknya0_Ao3MPsYDFGWDFYyJ-aLTvSB1wyISZQawf2p_HsQ/exec";
 
-    function fetchDataFromSheets() {
-      fetch(GAS_URL + "?action=GET_LOGS")
-        .then(response => response.json())
+    // Fungsi Tap RFID Fix CORS (Menggunakan GET Request)
+    function tapRFID(uidCard) {
+      const fullUrl = GAS_URL + "?action=LOGIN_STAFF&rfid_uid=" + encodeURIComponent(uidCard);
+
+      fetch(fullUrl)
+        .then(res => res.json())
         .then(data => {
-          if (data.status === "SUCCESS") {
-            document.getElementById("net-status").innerText = "Terhubung (Real-time)";
-            document.getElementById("net-status").style.color = "green";
-
-            const logs = data.logs.reverse(); // Tampilkan log paling baru di atas
-            let tableRows = "";
-
-            if (logs.length > 0) {
-              // Set aktivitas terakhir
-              document.getElementById("latest-user").innerText = 
-                `${logs[0].staff_name} (${logs[0].rfid_uid}) - Status: ${logs[0].status}`;
-
-              logs.forEach(log => {
-                const statusClass = log.status === "ALLOWED" ? "badge-allowed" : "badge-denied";
-                const timeFormatted = new Date(log.timestamp).toLocaleString("id-ID");
-
-                tableRows += `
-                  <tr>
-                    <td>${timeFormatted}</td>
-                    <td>${log.rfid_uid}</td>
-                    <td>${log.staff_name}</td>
-                    <td>${log.type}</td>
-                    <td class="${statusClass}">${log.status}</td>
-                  </tr>
-                `;
-              });
-            } else {
-              tableRows = `<tr><td colspan="5">Belum ada data log.</td></tr>`;
-            }
-
-            document.getElementById("log-table-body").innerHTML = tableRows;
+          console.log("Respon Server:", data);
+          if (data.status === "ALLOWED") {
+            alert("✅ AKSES DITERIMA!\nHalo, " + data.staff_name);
+          } else {
+            alert("❌ AKSES DITOLAK!\nKartu tidak terdaftar.");
           }
+          loadLogs(); // Refresh tabel setelah tap
         })
         .catch(err => {
-          console.error("Gagal mengambil data:", err);
-          document.getElementById("net-status").innerText = "Gagal Konek Ke Server";
-          document.getElementById("net-status").style.color = "red";
+          console.warn("Mencoba fallback mode GET...", err);
+          fetch(fullUrl, { mode: "no-cors" }).then(() => {
+            alert("Request dikirim ke server!");
+            setTimeout(loadLogs, 1500);
+          });
         });
     }
 
-    // Jalankan pertama kali & atur auto-refresh setiap 2 detik
-    fetchDataFromSheets();
-    setInterval(fetchDataFromSheets, 2000);
+    // Fungsi Mengambil Data Logs Realtime
+    function loadLogs() {
+      const fullUrl = GAS_URL + "?action=GET_LOGS";
+
+      fetch(fullUrl)
+        .then(res => res.json())
+        .then(data => {
+          const badge = document.getElementById("status-badge");
+          badge.innerText = "Terhubung (Online)";
+          badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+
+          if (data.status === "SUCCESS" && data.logs) {
+            const logs = data.logs.reverse(); // Data terbaru di paling atas
+            let html = "";
+
+            if (logs.length === 0) {
+              html = `<tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada riwayat tap.</td></tr>`;
+            } else {
+              logs.forEach(log => {
+                const isAllowed = log.status === "ALLOWED";
+                const badgeClass = isAllowed 
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
+                  : "bg-rose-500/10 text-rose-400 border-rose-500/20";
+
+                const dateObj = new Date(log.timestamp);
+                const timeStr = isNaN(dateObj) ? log.timestamp : dateObj.toLocaleString("id-ID");
+
+                html += `
+                  <tr class="hover:bg-slate-700/30 transition">
+                    <td class="p-3 text-slate-400 font-mono text-xs">${timeStr}</td>
+                    <td class="p-3 font-mono text-blue-400">${log.rfid_uid}</td>
+                    <td class="p-3 font-medium text-slate-200">${log.staff_name}</td>
+                    <td class="p-3 text-slate-400">${log.type || 'TAP_IN'}</td>
+                    <td class="p-3">
+                      <span class="px-2.5 py-1 rounded-md text-xs font-semibold border ${badgeClass}">
+                        ${log.status}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              });
+            }
+            document.getElementById("log-table").innerHTML = html;
+          }
+        })
+        .catch(err => {
+          console.error("Gagal load log:", err);
+          const badge = document.getElementById("status-badge");
+          badge.innerText = "Error Koneksi";
+          badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+        });
+    }
+
+    // Auto load data saat halaman dibuka & refresh tiap 3 detik
+    loadLogs();
+    setInterval(loadLogs, 3000);
   </script>
 </body>
 </html>
