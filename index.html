@@ -68,30 +68,31 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbz98TFdTbcL8yHeDdt-3YdSGknya0_Ao3MPsYDFGWDFYyJ-aLTvSB1wyISZQawf2p_HsQ/exec";
 
-    // --- JSONP HELPER (TEMBUS CORS 100%) ---
-    function fetchJSONP(url, callbackName) {
-      const oldScript = document.getElementById("jsonp-script");
+    // --- FUNGSI TEMBUS CORS VIA SCRIPT INJECTION ---
+    function sendJSONPRequest(url, callbackName) {
+      const id = "script-" + callbackName;
+      const oldScript = document.getElementById(id);
       if (oldScript) oldScript.remove();
 
       const script = document.createElement("script");
-      script.id = "jsonp-script";
-      script.src = url + "&callback=" + callbackName;
+      script.id = id;
+      script.src = url + "&callback=" + callbackName + "&_nocache=" + new Date().getTime();
+      
       script.onerror = function() {
         const badge = document.getElementById("status-badge");
         badge.innerText = "Error Koneksi";
         badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
       };
+
       document.body.appendChild(script);
     }
 
-    // --- FUNGSI AMBIL LOGS ---
+    // --- AMBIL LOGS ---
     function loadLogs() {
-      const url = GAS_URL + "?action=GET_LOGS";
-      fetchJSONP(url, "handleLogsResponse");
+      sendJSONPRequest(GAS_URL + "?action=GET_LOGS", "onLogsReceived");
     }
 
-    // Callback dari server untuk loadLogs
-    function handleLogsResponse(data) {
+    window.onLogsReceived = function(data) {
       const badge = document.getElementById("status-badge");
       badge.innerText = "Terhubung (Online)";
       badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
@@ -129,25 +130,23 @@
         }
         document.getElementById("log-table").innerHTML = html;
       }
-    }
+    };
 
-    // --- FUNGSI TAP RFID ---
+    // --- SIMULASI TAP RFID ---
     function tapRFID(uidCard) {
-      const url = GAS_URL + "?action=LOGIN_STAFF&rfid_uid=" + encodeURIComponent(uidCard);
-      fetchJSONP(url, "handleTapResponse");
+      sendJSONPRequest(GAS_URL + "?action=LOGIN_STAFF&rfid_uid=" + encodeURIComponent(uidCard), "onTapReceived");
     }
 
-    // Callback dari server untuk tapRFID
-    function handleTapResponse(data) {
+    window.onTapReceived = function(data) {
       if (data.status === "ALLOWED") {
         alert("✅ AKSES DITERIMA!\nHalo, " + data.staff_name);
       } else {
         alert("❌ AKSES DITOLAK!\nKartu tidak terdaftar.");
       }
       loadLogs();
-    }
+    };
 
-    // Auto load data pertama & refresh tiap 3 detik
+    // Jalankan pertama kali & auto refresh tiap 3 detik
     loadLogs();
     setInterval(loadLogs, 3000);
   </script>
