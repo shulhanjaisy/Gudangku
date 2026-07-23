@@ -3,43 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gudangku System</title>
+  <title>Smart Warehouse - AI Restock Approval</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-6 font-sans">
 
-  <div class="max-w-4xl mx-auto space-y-6">
+  <div class="max-w-5xl mx-auto space-y-6">
     
     <!-- HEADER -->
     <div class="flex items-center justify-between bg-slate-800 p-6 rounded-2xl shadow-lg border border-slate-700">
       <div>
         <h1 class="text-2xl font-bold text-blue-400">Gudangku System</h1>
-        <p class="text-sm text-slate-400">Monitoring RFID Access & Log Real-time</p>
+        <p class="text-sm text-slate-400">AI Placement & Owner Restock Approval Portal</p>
       </div>
-      <div id="status-badge" class="px-4 py-2 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-        Menghubungkan...
-      </div>
-    </div>
-
-    <!-- CARDS SIMULATION -->
-    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
-      <h2 class="text-lg font-semibold text-slate-200">Simulasi Tap RFID (Web Browser)</h2>
-      <div class="flex flex-wrap gap-3">
-        <button onclick="tapRFID('9AD7E0DB')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition active:scale-95 shadow-md">
-          Tap Kartu Registered (9AD7E0DB)
-        </button>
-        <button onclick="tapRFID('12345678')" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-medium transition active:scale-95 shadow-md">
-          Tap Kartu Unregistered (12345678)
-        </button>
+      <div id="session-badge" class="px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+        Belum Tap RFID
       </div>
     </div>
 
-    <!-- LOG MONITOR -->
-    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+    <!-- STEP 1: VERIFIKASI RFID STAFF -->
+    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-3">
+      <h2 class="text-lg font-semibold text-slate-200">1. Tap RFID Karyawan</h2>
+      <button onclick="simulasiTap('9AD7E0DB')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition">
+        Tap Kartu (Jaisy - Staff)
+      </button>
+    </div>
+
+    <!-- STEP 2: TRANSAKSI AI BARANG -->
+    <div id="section-action" class="hidden bg-slate-800 p-6 rounded-2xl border border-blue-500/30 space-y-4">
+      <h2 class="text-lg font-semibold text-blue-400">2. Transaksi Barang (AI Decision)</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-800">
+        <select id="input-mode" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+          <option value="PUT_ITEM">📥 TARUH BARANG</option>
+          <option value="TAKE_ITEM">📤 AMBIL BARANG</option>
+        </select>
+        <input type="text" id="input-barang" placeholder="Nama Barang" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+        <input type="number" id="input-jumlah" value="1" placeholder="Jumlah Pcs" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+        <input type="number" id="input-berat" value="5" placeholder="Berat (Kg)" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+      </div>
+      <button onclick="prosesAIAgent()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold transition">
+        🤖 PROSES AI AGENT
+      </button>
+    </div>
+
+    <!-- PANEL KHUSUS OWNER: APPROVAL MANAGEMENT RESTOCK -->
+    <div class="bg-slate-800 p-6 rounded-2xl border border-amber-500/30 space-y-4">
       <div class="flex justify-between items-center">
-        <h2 class="text-lg font-semibold text-slate-200">Riwayat Akses Masuk</h2>
-        <button onclick="loadLogs()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition">
-          🔄 Refresh Log
+        <h2 class="text-lg font-semibold text-amber-400">👑 Panel Approval Restock (Owner)</h2>
+        <button onclick="loadRestockOrders()" class="text-xs bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300">
+          🔄 Refresh Orders
         </button>
       </div>
 
@@ -47,17 +59,39 @@
         <table class="w-full text-left text-sm text-slate-300">
           <thead class="bg-slate-700/50 text-slate-400 uppercase text-xs">
             <tr>
-              <th class="p-3 rounded-l-lg">Waktu</th>
-              <th class="p-3">UID RFID</th>
-              <th class="p-3">Nama Staff</th>
-              <th class="p-3">Aksi</th>
-              <th class="p-3 rounded-r-lg">Status</th>
+              <th class="p-3">Order ID</th>
+              <th class="p-3">Barang</th>
+              <th class="p-3">Jumlah Beli</th>
+              <th class="p-3">Harga/Pcs</th>
+              <th class="p-3">Total Biaya</th>
+              <th class="p-3">Status</th>
+              <th class="p-3">Aksi Owner</th>
             </tr>
           </thead>
-          <tbody id="log-table" class="divide-y divide-slate-700/50">
+          <tbody id="restock-table" class="divide-y divide-slate-700/50">
+            <tr><td colspan="7" class="p-4 text-center text-slate-500">Memuat pengajuan restock...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AUDIT LOGS -->
+    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
+      <h2 class="text-lg font-semibold text-slate-200">📊 Audit Log System</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-700/50 text-slate-400 uppercase text-xs">
             <tr>
-              <td colspan="5" class="p-4 text-center text-slate-500">Memuat data dari Google Sheets...</td>
+              <th class="p-3">Waktu</th>
+              <th class="p-3">Staff</th>
+              <th class="p-3">Aksi</th>
+              <th class="p-3">Barang</th>
+              <th class="p-3">Jumlah</th>
+              <th class="p-3">Lokasi Rak</th>
             </tr>
+          </thead>
+          <tbody id="audit-table" class="divide-y divide-slate-700/50">
+            <tr><td colspan="6" class="p-4 text-center text-slate-500">Memuat audit log...</td></tr>
           </tbody>
         </table>
       </div>
@@ -66,89 +100,148 @@
   </div>
 
   <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyetnqSQjpSAzRX0DcWxBBnqoG0MaUEUGrczobRCQ903X176gbOTLoVbB5u5bvH7WWa9w/exec";
+    const PYTHON_URL = "http://localhost:5000/api/agent/process";
+    // ⚠️ PASTE URL GOOGLE APPS SCRIPT-MU DI SINI
+    const GAS_URL = "https://script.google.com/macros/s/AKfycb.../exec"; 
 
-    // --- FUNGSI TEMBUS CORS VIA SCRIPT INJECTION ---
-    function sendJSONPRequest(url, callbackName) {
-      const id = "script-" + callbackName;
-      const oldScript = document.getElementById(id);
-      if (oldScript) oldScript.remove();
+    let activeUser = null;
+
+    function sendJSONP(url, callbackName) {
+      const id = "jsonp-" + callbackName;
+      const old = document.getElementById(id);
+      if (old) old.remove();
 
       const script = document.createElement("script");
       script.id = id;
-      script.src = url + "&callback=" + callbackName + "&_nocache=" + new Date().getTime();
-      
-      script.onerror = function() {
-        const badge = document.getElementById("status-badge");
-        badge.innerText = "Error Koneksi";
-        badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
-      };
-
+      script.src = url + "&callback=" + callbackName + "&_ts=" + new Date().getTime();
       document.body.appendChild(script);
     }
 
-    // --- AMBIL LOGS ---
-    function loadLogs() {
-      sendJSONPRequest(GAS_URL + "?action=GET_LOGS", "onLogsReceived");
+    function simulasiTap(rfid) {
+      sendJSONP(GAS_URL + "?action=VERIFY_RFID&rfid_uid=" + rfid, "onRfidVerified");
     }
 
-    window.onLogsReceived = function(data) {
-      const badge = document.getElementById("status-badge");
-      badge.innerText = "Terhubung (Online)";
-      badge.className = "px-4 py-2 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+    window.onRfidVerified = function(res) {
+      if (res.status === "ALLOWED") {
+        activeUser = res.staff;
+        document.getElementById("session-badge").innerText = "Online: " + activeUser.name;
+        document.getElementById("section-action").classList.remove("hidden");
+        alert("✅ RFID Terverifikasi!");
+      }
+    };
 
-      if (data.status === "SUCCESS" && data.logs) {
-        const logs = data.logs.reverse();
-        let html = "";
+    function prosesAIAgent() {
+      if (!activeUser) return alert("Tap RFID dulu!");
 
-        if (logs.length === 0) {
-          html = `<tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada riwayat tap.</td></tr>`;
-        } else {
-          logs.forEach(log => {
-            const isAllowed = log.status === "ALLOWED";
-            const badgeClass = isAllowed 
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-              : "bg-rose-500/10 text-rose-400 border-rose-500/20";
+      const mode = document.getElementById("input-mode").value;
+      const barang = document.getElementById("input-barang").value;
+      const jumlah = document.getElementById("input-jumlah").value;
+      const berat = document.getElementById("input-berat").value;
 
-            const dateObj = new Date(log.timestamp);
-            const timeStr = isNaN(dateObj) ? log.timestamp : dateObj.toLocaleString("id-ID");
+      fetch(PYTHON_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: mode, nama_barang: barang, jumlah: jumlah, berat_kg: berat, stok_sekarang: 2, min_stok: 5 })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const decision = data.agent_decision;
+        alert("🤖 Keputusan AI Agent: " + decision.instruksi);
 
-            html += `
-              <tr class="hover:bg-slate-700/30 transition">
-                <td class="p-3 text-slate-400 font-mono text-xs">${timeStr}</td>
-                <td class="p-3 font-mono text-blue-400">${log.rfid_uid}</td>
-                <td class="p-3 font-medium text-slate-200">${log.staff_name}</td>
-                <td class="p-3 text-slate-400">${log.type || 'TAP_IN'}</td>
-                <td class="p-3">
-                  <span class="px-2.5 py-1 rounded-md text-xs font-semibold border ${badgeClass}">
-                    ${log.status}
-                  </span>
-                </td>
-              </tr>
-            `;
-          });
+        if (decision.need_restock) {
+          const createOrderUrl = GAS_URL + `?action=CREATE_RESTOCK_ORDER&nama_barang=${encodeURIComponent(barang)}&jumlah_beli=${decision.rekomendasi_beli}&estimasi_harga=50000`;
+          sendJSONP(createOrderUrl, "onOrderCreated");
         }
-        document.getElementById("log-table").innerHTML = html;
-      }
-    };
 
-    // --- SIMULASI TAP RFID ---
-    function tapRFID(uidCard) {
-      sendJSONPRequest(GAS_URL + "?action=LOGIN_STAFF&rfid_uid=" + encodeURIComponent(uidCard), "onTapReceived");
+        const logUrl = GAS_URL + `?action=SAVE_LOG&rfid_uid=${activeUser.rfid}&staff_name=${encodeURIComponent(activeUser.name)}&tipe_aksi=${mode}&nama_barang=${encodeURIComponent(barang)}&jumlah=${jumlah}&rak=${decision.rak_tujuan || 'SISTEM'}`;
+        sendJSONP(logUrl, "onLogSaved");
+      });
     }
 
-    window.onTapReceived = function(data) {
-      if (data.status === "ALLOWED") {
-        alert("✅ AKSES DITERIMA!\nHalo, " + data.staff_name);
-      } else {
-        alert("❌ AKSES DITOLAK!\nKartu tidak terdaftar.");
-      }
-      loadLogs();
+    window.onOrderCreated = function(res) {
+      alert("⚠️ " + res.message);
+      loadRestockOrders();
     };
 
-    // Jalankan pertama kali & auto refresh tiap 3 detik
-    loadLogs();
-    setInterval(loadLogs, 3000);
+    window.onLogSaved = function() { loadAuditLogs(); };
+
+    function loadRestockOrders() {
+      sendJSONP(GAS_URL + "?action=GET_RESTOCK_ORDERS", "onOrdersReceived");
+    }
+
+    window.onOrdersReceived = function(res) {
+      if (res.status === "SUCCESS" && res.orders) {
+        let html = "";
+        res.orders.reverse().forEach(ord => {
+          const isPending = ord.status === "PENDING_APPROVAL";
+          
+          html += `
+            <tr>
+              <td class="p-3 font-mono text-xs text-amber-400">${ord.order_id}</td>
+              <td class="p-3 font-medium">${ord.nama_barang}</td>
+              <td class="p-3 font-mono">${ord.jumlah} pcs</td>
+              <td class="p-3 font-mono">Rp ${parseInt(ord.harga).toLocaleString("id-ID")}</td>
+              <td class="p-3 font-mono font-bold text-emerald-400">Rp ${parseInt(ord.total).toLocaleString("id-ID")}</td>
+              <td class="p-3 text-xs font-bold">${ord.status}</td>
+              <td class="p-3 flex gap-1">
+                ${isPending ? `
+                  <button onclick="approveOrder('${ord.order_id}', 'ACCEPT')" class="px-2 py-1 bg-emerald-600 text-xs text-white rounded hover:bg-emerald-500">Accept</button>
+                  <button onclick="editOrder('${ord.order_id}', ${ord.jumlah}, ${ord.harga})" class="px-2 py-1 bg-blue-600 text-xs text-white rounded hover:bg-blue-500">Edit</button>
+                  <button onclick="approveOrder('${ord.order_id}', 'DECLINE')" class="px-2 py-1 bg-rose-600 text-xs text-white rounded hover:bg-rose-500">Decline</button>
+                ` : `<span class="text-xs text-slate-500">Selesai</span>`}
+              </td>
+            </tr>
+          `;
+        });
+        document.getElementById("restock-table").innerHTML = html;
+      }
+    };
+
+    function approveOrder(orderId, decision) {
+      const url = GAS_URL + `?action=PROCESS_APPROVAL&order_id=${orderId}&decision=${decision}`;
+      sendJSONP(url, "onApprovalDone");
+    }
+
+    function editOrder(orderId, currentQty, currentPrice) {
+      const newQty = prompt("Edit Jumlah Beli (pcs):", currentQty);
+      const newPrice = prompt("Edit Estimasi Harga per Pcs (Rp):", currentPrice);
+
+      if (newQty && newPrice) {
+        const url = GAS_URL + `?action=PROCESS_APPROVAL&order_id=${orderId}&decision=EDIT&new_qty=${newQty}&new_price=${newPrice}`;
+        sendJSONP(url, "onApprovalDone");
+      }
+    }
+
+    window.onApprovalDone = function(res) {
+      alert("✅ " + res.message);
+      loadRestockOrders();
+    };
+
+    function loadAuditLogs() {
+      sendJSONP(GAS_URL + "?action=GET_AUDIT_LOGS", "onAuditReceived");
+    }
+
+    window.onAuditReceived = function(res) {
+      if (res.status === "SUCCESS" && res.logs) {
+        let html = "";
+        res.logs.reverse().forEach(log => {
+          html += `
+            <tr>
+              <td class="p-3 text-xs text-slate-400">${new Date(log.timestamp).toLocaleString("id-ID")}</td>
+              <td class="p-3 font-medium">${log.staff_name}</td>
+              <td class="p-3 font-bold text-blue-400">${log.type}</td>
+              <td class="p-3">${log.nama_barang}</td>
+              <td class="p-3 font-mono">${log.jumlah}</td>
+              <td class="p-3 text-indigo-300 font-semibold">${log.rak}</td>
+            </tr>
+          `;
+        });
+        document.getElementById("audit-table").innerHTML = html;
+      }
+    };
+
+    loadRestockOrders();
+    loadAuditLogs();
   </script>
 </body>
 </html>
