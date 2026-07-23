@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Warehouse - AI Restock Approval</title>
+  <title>Smart Warehouse - AI Restock Approval Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-6 font-sans">
@@ -16,33 +16,50 @@
         <h1 class="text-2xl font-bold text-blue-400">Gudangku System</h1>
         <p class="text-sm text-slate-400">AI Placement & Owner Restock Approval Portal</p>
       </div>
-      <div id="session-badge" class="px-4 py-2 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
-        Belum Tap RFID
+      <div id="session-badge" class="px-4 py-2 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        Online: Jaisy Shulhan (Admin)
       </div>
     </div>
 
-    <!-- STEP 1: VERIFIKASI RFID STAFF -->
+    <!-- STEP 1: VERIFIKASI RFID STAFF (OPSIONAL / SIMULASI) -->
     <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-3">
-      <h2 class="text-lg font-semibold text-slate-200">1. Tap RFID Karyawan</h2>
-      <button onclick="simulasiTap('9AD7E0DB')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition">
+      <h2 class="text-lg font-semibold text-slate-200">1. Tap RFID Karyawan (Opsional)</h2>
+      <button onclick="simulasiTap('9AD7E0DB')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition active:scale-95">
         Tap Kartu (Jaisy - Staff)
       </button>
     </div>
 
-    <!-- STEP 2: TRANSAKSI AI BARANG -->
-    <div id="section-action" class="hidden bg-slate-800 p-6 rounded-2xl border border-blue-500/30 space-y-4">
-      <h2 class="text-lg font-semibold text-blue-400">2. Transaksi Barang (AI Decision)</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-800">
-        <select id="input-mode" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
-          <option value="PUT_ITEM">📥 TARUH BARANG</option>
-          <option value="TAKE_ITEM">📤 AMBIL BARANG</option>
-        </select>
-        <input type="text" id="input-barang" placeholder="Nama Barang" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
-        <input type="number" id="input-jumlah" value="1" placeholder="Jumlah Pcs" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
-        <input type="number" id="input-berat" value="5" placeholder="Berat (Kg)" class="p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+    <!-- STEP 2: TRANSAKSI AI BARANG (LANGSUNG MUNCUL TANPA TERSEMBUNYI) -->
+    <div id="section-action" class="bg-slate-800 p-6 rounded-2xl border border-blue-500/30 space-y-4">
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-blue-400">2. Transaksi Barang (AI Decision)</h2>
+        <span id="active-staff" class="text-xs bg-blue-500/20 text-blue-300 px-3 py-1 rounded-md">Karyawan: Jaisy Shulhan (Admin)</span>
       </div>
-      <button onclick="prosesAIAgent()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold transition">
-        🤖 PROSES AI AGENT
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-slate-800">
+        <div>
+          <label class="text-xs text-slate-300 font-medium">Aksi Transaksi</label>
+          <select id="input-mode" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+            <option value="PUT_ITEM">📥 TARUH BARANG (Rekomendasi Rak AI)</option>
+            <option value="TAKE_ITEM">📤 AMBIL BARANG (Cek Limit & Restock AI)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-300 font-medium">Nama Barang</label>
+          <input type="text" id="input-barang" placeholder="Misal: Kabel Fiber Optik" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+        </div>
+        <div>
+          <label class="text-xs text-slate-300 font-medium">Jumlah (Pcs)</label>
+          <input type="number" id="input-jumlah" value="1" min="1" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+        </div>
+        <div>
+          <label class="text-xs text-slate-300 font-medium">Karakteristik Berat (Kg)</label>
+          <input type="number" id="input-berat" value="5" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+        </div>
+      </div>
+
+      <button onclick="prosesAIAgent()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold transition shadow-lg flex justify-center items-center gap-2">
+        🤖 MINTA KEPUTUSAN AI AGENT
       </button>
     </div>
 
@@ -50,7 +67,7 @@
     <div class="bg-slate-800 p-6 rounded-2xl border border-amber-500/30 space-y-4">
       <div class="flex justify-between items-center">
         <h2 class="text-lg font-semibold text-amber-400">👑 Panel Approval Restock (Owner)</h2>
-        <button onclick="loadRestockOrders()" class="text-xs bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300">
+        <button onclick="loadRestockOrders()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition">
           🔄 Refresh Orders
         </button>
       </div>
@@ -77,7 +94,13 @@
 
     <!-- AUDIT LOGS -->
     <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4">
-      <h2 class="text-lg font-semibold text-slate-200">📊 Audit Log System</h2>
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-slate-200">📊 Audit Log System</h2>
+        <button onclick="loadAuditLogs()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition">
+          🔄 Refresh Log
+        </button>
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm text-slate-300">
           <thead class="bg-slate-700/50 text-slate-400 uppercase text-xs">
@@ -87,7 +110,7 @@
               <th class="p-3">Aksi</th>
               <th class="p-3">Barang</th>
               <th class="p-3">Jumlah</th>
-              <th class="p-3">Lokasi Rak</th>
+              <th class="p-3">Lokasi Rak AI</th>
             </tr>
           </thead>
           <tbody id="audit-table" class="divide-y divide-slate-700/50">
@@ -100,11 +123,14 @@
   </div>
 
   <script>
-    const PYTHON_URL = "https://qualifier-cozily-clean.ngrok-free.dev/api/agent/process";
-    // ⚠️ PASTE URL GOOGLE APPS SCRIPT-MU DI SINI
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwbLjWD7_giwkE-iyVO2HH6x_E0lp2vdPZ6bCWVZBrTO6BJl7F6cnd0dc2n-flttSuIkA/exec";
+    // ⚠️ PASTE LINK NGROK KAMU DI SINI (Wajib akhiran /api/agent/process)
+    const PYTHON_URL = "https://qualifier-cozily-clean.ngrok-free.dev/api/agent/process"; 
 
-    let activeUser = null;
+    // ⚠️ PASTE LINK APPS SCRIPT KAMU DI SINI
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwbLjWD7_giwkE-iyVO2HH6x_E0lp2vdPZ6bCWVZBrTO6BJl7F6cnd0dc2n-flttSuIkA/exec"; 
+
+    // User default (tidak bergantung pada tap RFID)
+    let activeUser = { rfid: "9AD7E0DB", name: "Jaisy Shulhan", role: "Admin Gudang" };
 
     function sendJSONP(url, callbackName) {
       const id = "jsonp-" + callbackName;
@@ -117,6 +143,7 @@
       document.body.appendChild(script);
     }
 
+    // 1. SIMULASI TAP RFID
     function simulasiTap(rfid) {
       sendJSONP(GAS_URL + "?action=VERIFY_RFID&rfid_uid=" + rfid, "onRfidVerified");
     }
@@ -125,46 +152,68 @@
       if (res.status === "ALLOWED") {
         activeUser = res.staff;
         document.getElementById("session-badge").innerText = "Online: " + activeUser.name;
-        document.getElementById("section-action").classList.remove("hidden");
-        alert("✅ RFID Terverifikasi!");
+        document.getElementById("active-staff").innerText = "Karyawan: " + activeUser.name + " (" + activeUser.role + ")";
+        alert("✅ RFID Terverifikasi sebagai " + activeUser.name);
+      } else {
+        alert("❌ " + res.message);
       }
     };
 
+    // 2. PROSES TRANSAKSI KE PYTHON AI AGENT
     function prosesAIAgent() {
-      if (!activeUser) return alert("Tap RFID dulu!");
-
       const mode = document.getElementById("input-mode").value;
       const barang = document.getElementById("input-barang").value;
       const jumlah = document.getElementById("input-jumlah").value;
       const berat = document.getElementById("input-berat").value;
 
+      if (!barang) return alert("Isi nama barang terlebih dahulu!");
+
+      alert("⏳ AI Agent sedang memproses...");
+
       fetch(PYTHON_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420"
+        },
         body: JSON.stringify({ action: mode, nama_barang: barang, jumlah: jumlah, berat_kg: berat, stok_sekarang: 2, min_stok: 5 })
       })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP Status: " + res.status);
+        return res.json();
+      })
       .then(data => {
-        const decision = data.agent_decision;
-        alert("🤖 Keputusan AI Agent: " + decision.instruksi);
+        if (data.status === "SUCCESS") {
+          const decision = data.agent_decision;
+          alert("🤖 KEPUTUSAN AI AGENT:\n\n" + decision.instruksi);
 
-        if (decision.need_restock) {
-          const createOrderUrl = GAS_URL + `?action=CREATE_RESTOCK_ORDER&nama_barang=${encodeURIComponent(barang)}&jumlah_beli=${decision.rekomendasi_beli}&estimasi_harga=50000`;
-          sendJSONP(createOrderUrl, "onOrderCreated");
+          // Jika stok kritis, buatkan order restock & kirim email ke Owner
+          if (decision.need_restock) {
+            const createOrderUrl = GAS_URL + `?action=CREATE_RESTOCK_ORDER&nama_barang=${encodeURIComponent(barang)}&jumlah_beli=${decision.rekomendasi_beli}&estimasi_harga=50000`;
+            sendJSONP(createOrderUrl, "onOrderCreated");
+          }
+
+          // Simpan log transaksi ke Google Sheets
+          const logUrl = GAS_URL + `?action=SAVE_LOG&rfid_uid=${activeUser.rfid}&staff_name=${encodeURIComponent(activeUser.name)}&tipe_aksi=${mode}&nama_barang=${encodeURIComponent(barang)}&jumlah=${jumlah}&rak=${decision.rak_tujuan || 'SISTEM'}`;
+          sendJSONP(logUrl, "onLogSaved");
+        } else {
+          alert("❌ Error AI: " + data.message);
         }
-
-        const logUrl = GAS_URL + `?action=SAVE_LOG&rfid_uid=${activeUser.rfid}&staff_name=${encodeURIComponent(activeUser.name)}&tipe_aksi=${mode}&nama_barang=${encodeURIComponent(barang)}&jumlah=${jumlah}&rak=${decision.rak_tujuan || 'SISTEM'}`;
-        sendJSONP(logUrl, "onLogSaved");
+      })
+      .catch(err => {
+        console.error("Detail error:", err);
+        alert("❌ Gagal Konek ke Python AI!\n\nPeriksa 2 hal ini:\n1. Pastikan 'PYTHON_URL' di index.html pakai link ngrok terbaru + akhiran /api/agent/process\n2. Pastikan 'python agent.py' dan 'ngrok' sedang berjalan di terminal.");
       });
     }
 
     window.onOrderCreated = function(res) {
-      alert("⚠️ " + res.message);
+      alert("⚠️ NOTIFIKASI RESTOCK:\n" + res.message);
       loadRestockOrders();
     };
 
     window.onLogSaved = function() { loadAuditLogs(); };
 
+    // 3. LOAD TABEL RESTOCK ORDERS UNTUK OWNER
     function loadRestockOrders() {
       sendJSONP(GAS_URL + "?action=GET_RESTOCK_ORDERS", "onOrdersReceived");
     }
@@ -176,7 +225,7 @@
           const isPending = ord.status === "PENDING_APPROVAL";
           
           html += `
-            <tr>
+            <tr class="hover:bg-slate-700/30">
               <td class="p-3 font-mono text-xs text-amber-400">${ord.order_id}</td>
               <td class="p-3 font-medium">${ord.nama_barang}</td>
               <td class="p-3 font-mono">${ord.jumlah} pcs</td>
@@ -217,6 +266,7 @@
       loadRestockOrders();
     };
 
+    // 4. LOAD AUDIT LOGS
     function loadAuditLogs() {
       sendJSONP(GAS_URL + "?action=GET_AUDIT_LOGS", "onAuditReceived");
     }
@@ -226,7 +276,7 @@
         let html = "";
         res.logs.reverse().forEach(log => {
           html += `
-            <tr>
+            <tr class="hover:bg-slate-700/30">
               <td class="p-3 text-xs text-slate-400">${new Date(log.timestamp).toLocaleString("id-ID")}</td>
               <td class="p-3 font-medium">${log.staff_name}</td>
               <td class="p-3 font-bold text-blue-400">${log.type}</td>
@@ -240,6 +290,7 @@
       }
     };
 
+    // Otomatis muat data tabel saat halaman dibuka
     loadRestockOrders();
     loadAuditLogs();
   </script>
