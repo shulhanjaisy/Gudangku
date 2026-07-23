@@ -21,15 +21,23 @@
       </div>
     </div>
 
-    <!-- STEP 1: VERIFIKASI RFID STAFF (OPSIONAL / SIMULASI) -->
+    <!-- STEP 1: VERIFIKASI RFID STAFF (SIMULASI / FISIK) -->
     <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-3">
-      <h2 class="text-lg font-semibold text-slate-200">1. Tap RFID Karyawan (Opsional)</h2>
-      <button onclick="simulasiTap('9AD7E0DB')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition active:scale-95">
-        Tap Kartu (Jaisy - Staff)
-      </button>
+      <div class="flex justify-between items-center">
+        <h2 class="text-lg font-semibold text-slate-200">1. Verifikasi RFID Karyawan</h2>
+        <span class="text-xs text-slate-400">Scan kartu fisik ke reader ESP32 atau klik simulasi</span>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="simulasiTap('9AD7E0DB')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition active:scale-95 text-sm">
+          Simulasi Tap Kartu (Jaisy - 9AD7E0DB)
+        </button>
+        <button onclick="loadAuditLogs(); loadRestockOrders();" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium transition text-sm">
+          🔄 Sync Data Terbaru
+        </button>
+      </div>
     </div>
 
-    <!-- STEP 2: TRANSAKSI AI BARANG (LANGSUNG MUNCUL TANPA TERSEMBUNYI) -->
+    <!-- STEP 2: TRANSAKSI AI BARANG -->
     <div id="section-action" class="bg-slate-800 p-6 rounded-2xl border border-blue-500/30 space-y-4">
       <div class="flex justify-between items-center">
         <h2 class="text-lg font-semibold text-blue-400">2. Transaksi Barang (AI Decision)</h2>
@@ -46,11 +54,11 @@
         </div>
         <div>
           <label class="text-xs text-slate-300 font-medium">Nama Barang</label>
-          <input type="text" id="input-barang" placeholder="Misal: Kabel Fiber Optik" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+          <input type="text" id="input-barang" placeholder="Misal: Semen Bekasi" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
         </div>
         <div>
           <label class="text-xs text-slate-300 font-medium">Jumlah (Pcs)</label>
-          <input type="number" id="input-jumlah" value="1" min="1" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
+          <input type="number" id="input-jumlah" value="30" min="1" class="w-full mt-1 p-2.5 rounded-lg bg-slate-900 text-slate-100 border border-slate-700">
         </div>
         <div>
           <label class="text-xs text-slate-300 font-medium">Karakteristik Berat (Kg)</label>
@@ -122,15 +130,54 @@
 
   </div>
 
+  <!-- MODAL CUSTOM UNTUK RESULT AI AGENT -->
+  <div id="ai-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+    <div class="bg-slate-800 border border-slate-700 max-w-lg w-full rounded-2xl p-6 shadow-2xl space-y-4 transform transition-all scale-100">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🤖</span>
+          <h3 class="font-bold text-lg text-indigo-400">KEPUTUSAN AI AGENT</h3>
+        </div>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white font-bold text-xl">&times;</button>
+      </div>
+      
+      <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700/50">
+        <p id="modal-text" class="text-slate-200 font-medium leading-relaxed"></p>
+      </div>
+
+      <div id="modal-extra-badge" class="hidden bg-amber-500/10 border border-amber-500/30 text-amber-400 p-3 rounded-lg text-xs">
+        ⚠️ Stok menipis! AI telah mengirimkan draf restock & email ke Owner.
+      </div>
+
+      <button onclick="closeModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold transition">
+        Mengerti / Tutup
+      </button>
+    </div>
+  </div>
+
   <script>
-    // ⚠️ PASTE LINK NGROK KAMU DI SINI (Wajib akhiran /api/agent/process)
+    // ⚠️ PASTE LINK NGROK KAMU DI SINI (Wajib /api/agent/process)
     const PYTHON_URL = "https://qualifier-cozily-clean.ngrok-free.dev/api/agent/process"; 
 
     // ⚠️ PASTE LINK APPS SCRIPT KAMU DI SINI
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwbLjWD7_giwkE-iyVO2HH6x_E0lp2vdPZ6bCWVZBrTO6BJl7F6cnd0dc2n-flttSuIkA/exec"; 
 
-    // User default (tidak bergantung pada tap RFID)
     let activeUser = { rfid: "9AD7E0DB", name: "Jaisy Shulhan", role: "Admin Gudang" };
+
+    function showModal(text, isRestock = false) {
+      document.getElementById("modal-text").innerText = text;
+      const extra = document.getElementById("modal-extra-badge");
+      if (isRestock) {
+        extra.classList.remove("hidden");
+      } else {
+        extra.classList.add("hidden");
+      }
+      document.getElementById("ai-modal").classList.remove("hidden");
+    }
+
+    function closeModal() {
+      document.getElementById("ai-modal").classList.add("hidden");
+    }
 
     function sendJSONP(url, callbackName) {
       const id = "jsonp-" + callbackName;
@@ -143,7 +190,7 @@
       document.body.appendChild(script);
     }
 
-    // 1. SIMULASI TAP RFID
+    // SIMULASI / CIK TAP RFID
     function simulasiTap(rfid) {
       sendJSONP(GAS_URL + "?action=VERIFY_RFID&rfid_uid=" + rfid, "onRfidVerified");
     }
@@ -153,22 +200,20 @@
         activeUser = res.staff;
         document.getElementById("session-badge").innerText = "Online: " + activeUser.name;
         document.getElementById("active-staff").innerText = "Karyawan: " + activeUser.name + " (" + activeUser.role + ")";
-        alert("✅ RFID Terverifikasi sebagai " + activeUser.name);
+        showModal("✅ RFID Terverifikasi!\nNama: " + activeUser.name + "\nRole: " + activeUser.role);
       } else {
-        alert("❌ " + res.message);
+        showModal("❌ " + res.message);
       }
     };
 
-    // 2. PROSES TRANSAKSI KE PYTHON AI AGENT
+    // PROSES TRANSAKSI AI
     function prosesAIAgent() {
       const mode = document.getElementById("input-mode").value;
       const barang = document.getElementById("input-barang").value;
       const jumlah = document.getElementById("input-jumlah").value;
       const berat = document.getElementById("input-berat").value;
 
-      if (!barang) return alert("Isi nama barang terlebih dahulu!");
-
-      alert("⏳ AI Agent sedang memproses...");
+      if (!barang) return showModal(" Isilah nama barang terlebih dahulu!");
 
       fetch(PYTHON_URL, {
         method: "POST",
@@ -178,42 +223,31 @@
         },
         body: JSON.stringify({ action: mode, nama_barang: barang, jumlah: jumlah, berat_kg: berat, stok_sekarang: 2, min_stok: 5 })
       })
-      .then(res => {
-        if (!res.ok) throw new Error("HTTP Status: " + res.status);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         if (data.status === "SUCCESS") {
           const decision = data.agent_decision;
-          alert("🤖 KEPUTUSAN AI AGENT:\n\n" + decision.instruksi);
+          showModal(decision.instruksi, decision.need_restock);
 
-          // Jika stok kritis, buatkan order restock & kirim email ke Owner
           if (decision.need_restock) {
             const createOrderUrl = GAS_URL + `?action=CREATE_RESTOCK_ORDER&nama_barang=${encodeURIComponent(barang)}&jumlah_beli=${decision.rekomendasi_beli}&estimasi_harga=50000`;
             sendJSONP(createOrderUrl, "onOrderCreated");
           }
 
-          // Simpan log transaksi ke Google Sheets
           const logUrl = GAS_URL + `?action=SAVE_LOG&rfid_uid=${activeUser.rfid}&staff_name=${encodeURIComponent(activeUser.name)}&tipe_aksi=${mode}&nama_barang=${encodeURIComponent(barang)}&jumlah=${jumlah}&rak=${decision.rak_tujuan || 'SISTEM'}`;
           sendJSONP(logUrl, "onLogSaved");
         } else {
-          alert("❌ Error AI: " + data.message);
+          showModal("❌ Error AI: " + data.message);
         }
       })
       .catch(err => {
-        console.error("Detail error:", err);
-        alert("❌ Gagal Konek ke Python AI!\n\nPeriksa 2 hal ini:\n1. Pastikan 'PYTHON_URL' di index.html pakai link ngrok terbaru + akhiran /api/agent/process\n2. Pastikan 'python agent.py' dan 'ngrok' sedang berjalan di terminal.");
+        showModal("❌ Gagal Konek ke Python AI!\n\nPastikan 'python agent.py' & 'ngrok' berjalan.");
       });
     }
 
-    window.onOrderCreated = function(res) {
-      alert("⚠️ NOTIFIKASI RESTOCK:\n" + res.message);
-      loadRestockOrders();
-    };
-
+    window.onOrderCreated = function(res) { loadRestockOrders(); };
     window.onLogSaved = function() { loadAuditLogs(); };
 
-    // 3. LOAD TABEL RESTOCK ORDERS UNTUK OWNER
     function loadRestockOrders() {
       sendJSONP(GAS_URL + "?action=GET_RESTOCK_ORDERS", "onOrdersReceived");
     }
@@ -223,7 +257,6 @@
         let html = "";
         res.orders.reverse().forEach(ord => {
           const isPending = ord.status === "PENDING_APPROVAL";
-          
           html += `
             <tr class="hover:bg-slate-700/30">
               <td class="p-3 font-mono text-xs text-amber-400">${ord.order_id}</td>
@@ -254,7 +287,6 @@
     function editOrder(orderId, currentQty, currentPrice) {
       const newQty = prompt("Edit Jumlah Beli (pcs):", currentQty);
       const newPrice = prompt("Edit Estimasi Harga per Pcs (Rp):", currentPrice);
-
       if (newQty && newPrice) {
         const url = GAS_URL + `?action=PROCESS_APPROVAL&order_id=${orderId}&decision=EDIT&new_qty=${newQty}&new_price=${newPrice}`;
         sendJSONP(url, "onApprovalDone");
@@ -262,11 +294,10 @@
     }
 
     window.onApprovalDone = function(res) {
-      alert("✅ " + res.message);
+      showModal("✅ " + res.message);
       loadRestockOrders();
     };
 
-    // 4. LOAD AUDIT LOGS
     function loadAuditLogs() {
       sendJSONP(GAS_URL + "?action=GET_AUDIT_LOGS", "onAuditReceived");
     }
@@ -290,7 +321,6 @@
       }
     };
 
-    // Otomatis muat data tabel saat halaman dibuka
     loadRestockOrders();
     loadAuditLogs();
   </script>
